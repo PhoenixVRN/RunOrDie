@@ -1,0 +1,15 @@
+Pixel Art Monster - Dungeon
+
+1.0.3
+	- Fix issues with 2D lit shaders in build.
+
+1.0.2
+	- Add 2D lighting support.
+	- Update physics settings for smoother movement.
+	- Several bugs fixed.
+
+1.0.1
+	- Update included "Pixel Art Platformer - Village Props" to 2.1.0
+
+1.0.0
+	- First Release
