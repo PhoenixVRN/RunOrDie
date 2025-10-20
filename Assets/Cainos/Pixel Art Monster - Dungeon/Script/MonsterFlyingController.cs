@@ -85,7 +85,7 @@ namespace Cainos.PixelArtMonster_Dungeon
             }
 
             //GET CURRENT SPEED FROM RIGIDBODY
-            curVel = rb2d.linearVelocity;
+            curVel = rb2d.velocity;
 
             //HANDLE MOVEMENT
             //has movement input
@@ -114,7 +114,7 @@ namespace Cainos.PixelArtMonster_Dungeon
                 curVel = Vector2.MoveTowards(curVel, Vector2.zero, brakeAcc * Time.deltaTime);
             }
 
-            rb2d.linearVelocity = curVel;
+            rb2d.velocity = curVel;
 
             pm.Facing = Mathf.RoundToInt(inputMove.x);
         }

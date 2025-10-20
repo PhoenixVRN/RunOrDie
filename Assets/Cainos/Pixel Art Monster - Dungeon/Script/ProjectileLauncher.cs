@@ -41,7 +41,7 @@ namespace Cainos.PixelArtMonster_Dungeon
             var rb2d = projectile.GetComponent<Rigidbody2D>();
             if ( rb2d)
             {
-                rb2d.linearVelocity = projectile.transform.right * speed;
+                rb2d.velocity = projectile.transform.right * speed;
             }
 
             //fx

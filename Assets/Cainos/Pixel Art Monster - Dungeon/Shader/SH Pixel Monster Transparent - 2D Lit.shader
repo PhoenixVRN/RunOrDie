@@ -54,7 +54,8 @@ Shader "Cainos/Pixel Art Monster - Dungeon/Transparent - 2D Lit"
                 float2	lightingUV  : TEXCOORD1;
             };
 
-            #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/LightingUtility.hlsl"
+            // Убираем этот инклюд - он уже есть в CombinedShapeLightShared.hlsl
+            // #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/LightingUtility.hlsl"
 
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
@@ -93,6 +94,7 @@ Shader "Cainos/Pixel Art Monster - Dungeon/Transparent - 2D Lit"
                 return o;
             }
 
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/LightingUtility.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/CombinedShapeLightShared.hlsl"
 
             half4 CombinedShapeLightFragment(Varyings i) : SV_Target

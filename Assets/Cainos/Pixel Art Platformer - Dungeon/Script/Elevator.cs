@@ -3,7 +3,7 @@ using UnityEngine;
 using Cainos.LucidEditor;
 using Cainos.Common;
 
-namespace Cainos.PixelArtPlatformer_Dungeon
+namespace Cainos.PixelArtPlatformer_VillageProps
 {
     public class Elevator : MonoBehaviour
     {
@@ -26,8 +26,8 @@ namespace Cainos.PixelArtPlatformer_Dungeon
                 this.length = value;
 
                 platform.transform.localPosition = new Vector3(0.0f, -value, 0.0f);
-                chainL.size = new Vector2(0.09375f, value + chainLengthOffset);
-                chainR.size = new Vector2(0.09375f, value + chainLengthOffset);
+                chainL.size = new Vector2(0.09375f, value - 8 * 0.03125f );
+                chainR.size = new Vector2(0.09375f, value - 8 * 0.03125f );
             }
         }
         private float length;
@@ -61,14 +61,11 @@ namespace Cainos.PixelArtPlatformer_Dungeon
         private float waitTimer;
         private float curSpeed;
         private float targetLength;
-        private float chainLengthOffset;
         private SecondOrderDynamics secondOrderDynamics = new SecondOrderDynamics(4.0f, 0.3f, -0.3f);
 
 
         private void Start()
         {
-            chainLengthOffset = chainL.GetComponent<SpriteRenderer>().size.y + platform.transform.localPosition.y;
-
             curState = startState;
             Length = curState == State.Up ? lengthRange.y : lengthRange.x;
             targetLength = Length;
