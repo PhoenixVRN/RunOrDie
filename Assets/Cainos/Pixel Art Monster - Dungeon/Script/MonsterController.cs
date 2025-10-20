@@ -132,7 +132,7 @@ namespace Cainos.PixelArtMonster_Dungeon
             if ( isInJumpPrepare ) inputH = 0.0f;
 
             //get current velocity from rigidbody
-            curVel = rb2d.velocity;
+            curVel = rb2d.linearVelocity;
 
             //set acceleration and max speed base on condition
             float acc = 0.0f;
@@ -221,7 +221,7 @@ namespace Cainos.PixelArtMonster_Dungeon
             }
 
             //set modified velocity back to rigidbody
-            rb2d.velocity = curVel;
+            rb2d.linearVelocity = curVel;
 
             //set parameters on PixelMonster script to change appearance accordingly
             pm.SpeedVertical = curVel.y;

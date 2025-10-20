@@ -442,7 +442,7 @@ namespace Cainos.CustomizablePixelCharacter
 
             var weapon = character.DetachWeapon().GetComponent<Rigidbody2D>();
 
-            weapon.velocity = velocity;
+            weapon.linearVelocity = velocity;
             weapon.angularVelocity = -facingDir * throwAngularSpeed;
 
             weapon.AddForce(PointAtTargetDirection * throwForce);
@@ -1120,7 +1120,7 @@ namespace Cainos.CustomizablePixelCharacter
 
 
             velocity.x = dashSpeedStart * facingDir;
-            rb2d.velocity = velocity;
+            rb2d.linearVelocity = velocity;
 
             isDashing = true;
             dashTimer = dashTime;
@@ -1671,7 +1671,7 @@ namespace Cainos.CustomizablePixelCharacter
                     isClimbingLedge = true;
                     ledgeHeight = LedgeClimbRaycastHeight - hit.distance;
 
-                    rb2d.velocity = Vector2.zero;
+                    rb2d.linearVelocity = Vector2.zero;
                 }
 
                 ledgeClimbLocked = false;
@@ -2142,7 +2142,7 @@ namespace Cainos.CustomizablePixelCharacter
 
         private void FixedUpdate()
         {
-            velocity = rb2d.velocity - Vector2.up * groundLiftSpeed;
+            velocity = rb2d.linearVelocity - Vector2.up * groundLiftSpeed;
             gravityScale = 1.0f;
 
             GroundCheck();
@@ -2157,7 +2157,7 @@ namespace Cainos.CustomizablePixelCharacter
             ApplyRootMotion();
 
             rb2d.gravityScale = gravityScale;
-            rb2d.velocity = velocity + Vector2.up * groundLiftSpeed;
+            rb2d.linearVelocity = velocity + Vector2.up * groundLiftSpeed;
         }
 
         private void LateUpdate()

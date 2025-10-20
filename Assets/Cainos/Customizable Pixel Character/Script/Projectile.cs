@@ -97,11 +97,11 @@ namespace Cainos.CustomizablePixelCharacter
         {
             get
             {
-                return Rigidbody2D.velocity;
+                return Rigidbody2D.linearVelocity;
             }
             set
             {
-                Rigidbody2D.velocity = value;
+                Rigidbody2D.linearVelocity = value;
             }
         }
 
