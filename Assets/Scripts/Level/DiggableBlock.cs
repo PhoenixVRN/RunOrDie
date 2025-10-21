@@ -20,7 +20,7 @@ public class DiggableBlock : MonoBehaviour
     [SerializeField] private bool showRestoreProgress = true;
     [SerializeField] private Color warningColor = Color.yellow;
 
-    private SpriteRenderer spriteRenderer;
+    public SpriteRenderer spriteRenderer;
     private Collider2D blockCollider;
     private Color originalColor;
     private bool isDug = false;
@@ -28,7 +28,7 @@ public class DiggableBlock : MonoBehaviour
 
     private void Awake()
     {
-        spriteRenderer = GetComponent<SpriteRenderer>();
+        //spriteRenderer = GetComponent<SpriteRenderer>();
         blockCollider = GetComponent<Collider2D>();
 
         if (spriteRenderer != null)

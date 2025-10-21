@@ -1,6 +1,10 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 /// <summary>
 /// Контроллер игрока в стиле Lode Runner
 /// Поддержка: ходьба, лазание по лестницам, веревкам, копание ям
@@ -68,6 +72,7 @@ public class PlayerController : MonoBehaviour
     private Vector2 moveInput;
     private float horizontalInput;
     private float verticalInput;
+    private bool digRequest;
 
     // Копание
     private float lastDigTime;
@@ -210,6 +215,10 @@ public class PlayerController : MonoBehaviour
             horizontalInput = 0f;
             verticalInput = 0f;
         }
+
+        // Копание: пробел (Input System)
+        digRequest = UnityEngine.InputSystem.Keyboard.current != null &&
+                     UnityEngine.InputSystem.Keyboard.current.spaceKey.wasPressedThisFrame;
     }
 
     /// <summary>
@@ -445,22 +454,17 @@ public class PlayerController : MonoBehaviour
         // Проверка кулдауна
         if (Time.time < lastDigTime + digCooldown) return;
 
-        // Можно копать только стоя на земле
-        if (!isGrounded) return;
+        // Можно копать только стоя на земле, но НЕ в выкопанной яме
+        if (!isGrounded || IsInDugHole()) return;
 
         Vector2 digPosition = Vector2.zero;
         bool shouldDig = false;
 
-        // Копание слева
-        if (digLeftAction != null && digLeftAction.WasPressedThisFrame())
+        // Копание по направлению взгляда по пробелу
+        if (digRequest)
         {
-            digPosition = new Vector2(transform.position.x - digRange, transform.position.y - 0.5f);
-            shouldDig = true;
-        }
-        // Копание справа
-        else if (digRightAction != null && digRightAction.WasPressedThisFrame())
-        {
-            digPosition = new Vector2(transform.position.x + digRange, transform.position.y - 0.5f);
+            float dir = isFacingRight ? 1f : -1f;
+            digPosition = new Vector2(transform.position.x + dir * digRange, transform.position.y - 0.9f);
             shouldDig = true;
         }
 
@@ -477,7 +481,7 @@ public class PlayerController : MonoBehaviour
     private void DigHole(Vector2 position)
     {
         // Проверяем, есть ли копаемый блок
-        Collider2D diggableBlock = Physics2D.OverlapCircle(position, 0.3f, diggableLayer);
+        Collider2D diggableBlock = Physics2D.OverlapCircle(position, 0.2f, diggableLayer);
 
         if (diggableBlock != null)
         {
@@ -537,11 +541,11 @@ public class PlayerController : MonoBehaviour
 
         // Зона копания слева
         Gizmos.color = Color.yellow;
-        Vector3 digLeft = transform.position + new Vector3(-digRange, -0.5f, 0f);
+        Vector3 digLeft = transform.position + new Vector3(-digRange, -0.9f, 0f);
         Gizmos.DrawWireSphere(digLeft, 0.3f);
 
         // Зона копания справа
-        Vector3 digRight = transform.position + new Vector3(digRange, -0.5f, 0f);
+        Vector3 digRight = transform.position + new Vector3(digRange, -0.9f, 0f);
         Gizmos.DrawWireSphere(digRight, 0.3f);
 
         // Зона проверки лестницы
@@ -553,9 +557,107 @@ public class PlayerController : MonoBehaviour
         Gizmos.DrawWireCube(transform.position, new Vector3(0.5f, 0.3f, 0f));
     }
 
+    /// <summary>
+    /// Постоянная визуализация области детектирования diggableBlock
+    /// </summary>
+    private void OnDrawGizmos()
+    {
+        // Показываем активную зону детектирования копаемого блока
+        float dir = isFacingRight ? 1f : -1f;
+        Vector3 digPosition = transform.position + new Vector3(dir * digRange, -0.9f, 0f);
+        
+        // Проверяем, есть ли блок в этой позиции
+        Collider2D diggableBlock = Physics2D.OverlapCircle(digPosition, 0.2f, diggableLayer);
+        
+        // Меняем цвет в зависимости от того, найден ли блок
+        if (diggableBlock != null)
+        {
+            DiggableBlock block = diggableBlock.GetComponent<DiggableBlock>();
+            if (block != null && !block.IsDug())
+            {
+                // Зеленый - можно копать
+                Gizmos.color = new Color(0f, 1f, 0f, 0.5f);
+                #if UNITY_EDITOR
+                Handles.color = Color.green;
+                #endif
+            }
+            else
+            {
+                // Красный - блок уже выкопан
+                Gizmos.color = new Color(1f, 0f, 0f, 0.3f);
+                #if UNITY_EDITOR
+                Handles.color = Color.red;
+                #endif
+            }
+        }
+        else
+        {
+            // Серый - нет блока для копания
+            Gizmos.color = new Color(0.5f, 0.5f, 0.5f, 0.3f);
+            #if UNITY_EDITOR
+            Handles.color = new Color(0.5f, 0.5f, 0.5f, 0.7f);
+            #endif
+        }
+        
+        // Рисуем круг области детектирования (радиус 0.2f)
+        Gizmos.DrawWireSphere(digPosition, 0.2f);
+        Gizmos.DrawSphere(digPosition, 0.2f);
+        
+        // Рисуем надпись с информацией
+        #if UNITY_EDITOR
+        string layerInfo = GetLayerMaskName(diggableLayer);
+        Handles.Label(
+            digPosition + Vector3.up * 0.5f, 
+            $"Детект: r=0.2f\n{layerInfo}\nБлок: {(diggableBlock != null ? "Да" : "Нет")}"
+        );
+        #endif
+    }
+
     // Публичные методы для внешнего управления
     public void SetCanMove(bool value) => canMove = value;
     public PlayerState GetState() => currentState;
     public bool IsGrounded() => isGrounded;
+    
+    /// <summary>
+    /// Получает читаемое имя слоев из LayerMask
+    /// </summary>
+    private string GetLayerMaskName(LayerMask layerMask)
+    {
+        if (layerMask.value == 0)
+            return "Слой: Нет";
+        
+        string result = "Слой: ";
+        for (int i = 0; i < 32; i++)
+        {
+            if ((layerMask.value & (1 << i)) != 0)
+            {
+                if (result != "Слой: ")
+                    result += ", ";
+                result += LayerMask.LayerToName(i);
+            }
+        }
+        
+        return result;
+    }
+    
+    /// <summary>
+    /// Проверка: находится ли игрок в выкопанной яме
+    /// </summary>
+    private bool IsInDugHole()
+    {
+        // Проверяем область под ногами игрока на наличие выкопанных блоков
+        Vector2 checkPos = new Vector2(transform.position.x, transform.position.y - 0.8f);
+        Collider2D[] colliders = Physics2D.OverlapCircleAll(checkPos, 0.3f);
+        
+        foreach (Collider2D col in colliders)
+        {
+            DiggableBlock block = col.GetComponent<DiggableBlock>();
+            if (block != null && block.IsDug())
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 }
 
