@@ -45,11 +45,16 @@ public class PlayerController : MonoBehaviour
 
     [Header("Настройки")]
     [SerializeField] private bool canMove = true;
+    
+    [Header("Смерть и возрождение")]
+    [SerializeField] private float respawnDelay = 2f;
+    [SerializeField] private Transform respawnPoint;
 
     // Компоненты
     private Rigidbody2D rb;
     private CapsuleCollider2D capsuleCollider;
     private Animator animator;
+    private SpriteRenderer spriteRenderer;
 
     // Input Actions
     private InputAction moveAction;
@@ -62,6 +67,7 @@ public class PlayerController : MonoBehaviour
     private bool isOnLadder;
     private bool isOnRope;
     private bool isFacingRight = true;
+    private bool isDead = false;
     
     // Ссылки на объекты окружения
     private Collider2D currentLadder;
@@ -102,6 +108,7 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         capsuleCollider = GetComponent<CapsuleCollider2D>();
         animator = GetComponent<Animator>();
+        spriteRenderer = GetComponentInChildren<SpriteRenderer>();
 
         // Настройка Rigidbody2D для платформера
         rb.gravityScale = 3f;
@@ -146,7 +153,7 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        if (!canMove) return;
+        if (!canMove || isDead) return;
 
         // Проверка критичных компонентов
         if (groundCheck == null)
@@ -179,7 +186,7 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (!canMove) return;
+        if (!canMove || isDead) return;
 
         // Применение движения в зависимости от состояния
         ApplyMovement();
@@ -617,6 +624,7 @@ public class PlayerController : MonoBehaviour
     public void SetCanMove(bool value) => canMove = value;
     public PlayerState GetState() => currentState;
     public bool IsGrounded() => isGrounded;
+    public bool IsDead() => isDead;
     
     /// <summary>
     /// Получает читаемое имя слоев из LayerMask
@@ -638,6 +646,85 @@ public class PlayerController : MonoBehaviour
         }
         
         return result;
+    }
+    
+    /// <summary>
+    /// Смерть игрока (вызывается из DiggableBlock при схлопывании блока)
+    /// </summary>
+    public void Die()
+    {
+        if (isDead) return;
+        
+        isDead = true;
+        
+        // Останавливаем движение
+        rb.linearVelocity = Vector2.zero;
+        rb.gravityScale = 0f;
+        
+        // Отключаем коллизии
+        if (capsuleCollider != null)
+        {
+            capsuleCollider.enabled = false;
+        }
+        
+        // Визуальный эффект смерти (опционально - можно добавить анимацию)
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = new Color(1f, 0.3f, 0.3f, 0.5f); // Красноватый полупрозрачный
+        }
+        
+        Debug.Log("Игрок умер - раздавлен блоком!");
+        
+        // Запускаем возрождение
+        StartCoroutine(RespawnAfterDelay());
+    }
+    
+    /// <summary>
+    /// Корутина возрождения с задержкой
+    /// </summary>
+    private System.Collections.IEnumerator RespawnAfterDelay()
+    {
+        yield return new WaitForSeconds(respawnDelay);
+        Respawn();
+    }
+    
+    /// <summary>
+    /// Возрождение игрока на точке возрождения
+    /// </summary>
+    private void Respawn()
+    {
+        isDead = false;
+        
+        // Восстанавливаем позицию
+        if (respawnPoint != null)
+        {
+            transform.position = respawnPoint.position;
+        }
+        else
+        {
+            // Если нет точки возрождения - возрождаем на текущей позиции немного выше
+            transform.position = new Vector3(transform.position.x, transform.position.y + 2f, transform.position.z);
+        }
+        
+        // Восстанавливаем физику
+        rb.gravityScale = 3f;
+        
+        // Включаем коллизии
+        if (capsuleCollider != null)
+        {
+            capsuleCollider.enabled = true;
+        }
+        
+        // Восстанавливаем визуал
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = Color.white;
+        }
+        
+        // Сбрасываем состояние
+        currentState = PlayerState.Falling;
+        
+        Debug.Log("Игрок возродился");
     }
     
     /// <summary>

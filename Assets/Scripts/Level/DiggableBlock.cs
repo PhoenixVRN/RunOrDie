@@ -141,6 +141,7 @@ public class DiggableBlock : MonoBehaviour
 
     /// <summary>
     /// Проверка, не находится ли игрок внутри блока при восстановлении
+    /// В оригинальной игре Lode Runner - игрок умирает!
     /// </summary>
     private void CheckForPlayerInside()
     {
@@ -154,15 +155,12 @@ public class DiggableBlock : MonoBehaviour
         {
             if (col.CompareTag("Player"))
             {
-                // Выталкиваем игрока вверх
+                // Убиваем игрока как в оригинальной игре
                 PlayerController player = col.GetComponent<PlayerController>();
-                if (player != null)
+                if (player != null && !player.IsDead())
                 {
-                    Vector3 newPos = col.transform.position;
-                    newPos.y = transform.position.y + 1f;
-                    col.transform.position = newPos;
-                    
-                    Debug.Log("Игрок был вытолкнут из блока при восстановлении");
+                    player.Die();
+                    Debug.Log("Игрок раздавлен восстанавливающимся блоком!");
                 }
             }
         }
