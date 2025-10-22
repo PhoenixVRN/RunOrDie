@@ -25,6 +25,12 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private bool centerOnLadder = true;
     [SerializeField] private float ladderCenterSpeed = 10f;
     
+    [Header("Настройки веревки")]
+    [SerializeField] private bool centerOnRope = true;
+    [SerializeField] private float ropeCenterSpeed = 8f;
+    [SerializeField] private bool canClimbRope = false; // Можно ли лазать вверх по веревке
+    [SerializeField] private float ropeClimbSpeed = 2f;
+    
     [Header("Настройки падения")]
     [SerializeField] private bool alignOnFalling = true;
     [Tooltip("Скорость выравнивания к оси при падении")]
@@ -68,11 +74,13 @@ public class PlayerController : MonoBehaviour
     private bool isOnRope;
     private bool isFacingRight = true;
     private bool isDead = false;
+    private bool releasedRope = false; // Флаг: игрок намеренно отпустил веревку
     
     // Ссылки на объекты окружения
     private Collider2D currentLadder;
     private Collider2D currentRope;
     private float ladderCenterX;
+    private float ropeCenterY; // Центр веревки по Y (высота для висения)
 
     // Ввод
     private Vector2 moveInput;
@@ -257,10 +265,11 @@ public class PlayerController : MonoBehaviour
             currentLadder = null;
         }
 
-        // Проверка веревки
+        // Проверка веревки - проверяем область рук игрока (чуть выше центра)
+        Vector2 ropeCheckPos = new Vector2(transform.position.x, transform.position.y + 0.3f);
         Collider2D ropeCollider = Physics2D.OverlapBox(
-            transform.position, 
-            new Vector2(0.5f, 0.3f), 
+            ropeCheckPos, 
+            new Vector2(0.6f, 0.4f), 
             0f, 
             ropeLayer
         );
@@ -269,6 +278,8 @@ public class PlayerController : MonoBehaviour
         {
             isOnRope = true;
             currentRope = ropeCollider;
+            // Сохраняем высоту веревки (нижняя граница bounds - это высота висения)
+            ropeCenterY = ropeCollider.bounds.min.y;
         }
         else
         {
@@ -328,17 +339,28 @@ public class PlayerController : MonoBehaviour
                 rb.linearVelocity = vel;
             }
         }
-        // Веревка
-        else if (isOnRope && !isGrounded)
+        // Веревка - можно зацепиться в воздухе или подпрыгнуть к ней
+        else if (isOnRope && !isGrounded && !releasedRope)
         {
             currentState = PlayerState.OnRope;
             rb.gravityScale = 0f; // Отключаем гравитацию на веревке
+        }
+        // Если на земле и над головой веревка - можно подпрыгнуть и схватиться
+        else if (isOnRope && isGrounded && verticalInput > 0.1f)
+        {
+            // Подпрыгиваем к веревке
+            currentState = PlayerState.OnRope;
+            rb.gravityScale = 0f;
+            releasedRope = false; // Сбрасываем флаг - намеренно схватились
+            // Небольшой импульс вверх для захвата веревки
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, 2f);
         }
         // Ходьба
         else if (isGrounded)
         {
             currentState = PlayerState.Walking;
             rb.gravityScale = 3f;
+            releasedRope = false; // Сбрасываем флаг когда коснулись земли
         }
         // Падение
         else
@@ -421,9 +443,37 @@ public class PlayerController : MonoBehaviour
                 break;
 
             case PlayerState.OnRope:
-                // Движение по веревке (только горизонтально)
+                // Движение по веревке
                 velocity.x = horizontalInput * ropeSpeed;
-                velocity.y = 0f; // Фиксированная высота на веревке
+                
+                // Центрирование по высоте веревки
+                if (centerOnRope && currentRope != null)
+                {
+                    float currentY = transform.position.y;
+                    float targetY = ropeCenterY;
+                    
+                    // Плавно центрируемся к высоте веревки
+                    if (Mathf.Abs(currentY - targetY) > 0.05f)
+                    {
+                        float newY = Mathf.MoveTowards(currentY, targetY, ropeCenterSpeed * Time.fixedDeltaTime);
+                        transform.position = new Vector3(transform.position.x, newY, transform.position.z);
+                        velocity.y = 0f;
+                    }
+                    else
+                    {
+                        velocity.y = 0f;
+                    }
+                }
+                else
+                {
+                    velocity.y = 0f; // Фиксированная высота на веревке
+                }
+                
+                // Опционально: лазание вверх по веревке
+                if (canClimbRope && verticalInput > 0.1f)
+                {
+                    velocity.y = verticalInput * ropeClimbSpeed;
+                }
                 
                 // Можно спрыгнуть вниз
                 if (verticalInput < -0.1f)
@@ -431,6 +481,7 @@ public class PlayerController : MonoBehaviour
                     velocity.y = -2f;
                     currentState = PlayerState.Falling;
                     rb.gravityScale = 3f;
+                    releasedRope = true; // Устанавливаем флаг - игрок намеренно отпустил веревку
                 }
                 break;
 
@@ -559,9 +610,19 @@ public class PlayerController : MonoBehaviour
         Gizmos.color = Color.blue;
         Gizmos.DrawWireCube(transform.position, new Vector3(0.5f, 1f, 0f));
 
-        // Зона проверки веревки
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawWireCube(transform.position, new Vector3(0.5f, 0.3f, 0f));
+        // Зона проверки веревки (область рук - чуть выше центра)
+        Gizmos.color = isOnRope ? Color.green : Color.cyan;
+        Vector3 ropeCheckPos = new Vector3(transform.position.x, transform.position.y + 0.3f, transform.position.z);
+        Gizmos.DrawWireCube(ropeCheckPos, new Vector3(0.6f, 0.4f, 0f));
+        
+        // Если на веревке - показываем целевую высоту
+        if (isOnRope && currentRope != null)
+        {
+            Gizmos.color = Color.yellow;
+            Vector3 ropeTargetPos = new Vector3(transform.position.x, ropeCenterY, transform.position.z);
+            Gizmos.DrawWireSphere(ropeTargetPos, 0.2f);
+            Gizmos.DrawLine(transform.position, ropeTargetPos);
+        }
     }
 
     /// <summary>
