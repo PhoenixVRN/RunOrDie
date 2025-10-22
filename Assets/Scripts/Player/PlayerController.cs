@@ -386,21 +386,30 @@ public class PlayerController : MonoBehaviour
                 break;
 
             case PlayerState.Falling:
-                // При падении - падаем вниз с выравниванием к ближайшей оси
-                velocity.x = 0f;
-                
-                // Автоматическое выравнивание к ближайшей оси (0.5, 1.5, 2.5...)
-                if (alignOnFalling)
+                // При падении - проверяем, находимся ли рядом с лестницей
+                if (isOnLadder && Mathf.Abs(horizontalInput) > 0.1f)
                 {
-                    float currentX = transform.position.x;
-                    // Вычисляем ближайшую точку N.5
-                    float targetX = Mathf.Round(currentX - 0.5f) + 0.5f;
+                    // Если в зоне лестницы и нажимаем кнопки - разрешаем сход влево/вправо
+                    velocity.x = horizontalInput * walkSpeed * 0.7f;
+                }
+                else
+                {
+                    // Обычное падение - падаем строго вниз
+                    velocity.x = 0f;
                     
-                    // Плавно выравниваем к целевой позиции
-                    if (Mathf.Abs(currentX - targetX) > 0.01f)
+                    // Автоматическое выравнивание к ближайшей оси (0.5, 1.5, 2.5...)
+                    if (alignOnFalling)
                     {
-                        float newX = Mathf.MoveTowards(currentX, targetX, fallingAlignSpeed * Time.fixedDeltaTime);
-                        transform.position = new Vector3(newX, transform.position.y, transform.position.z);
+                        float currentX = transform.position.x;
+                        // Вычисляем ближайшую точку N.5
+                        float targetX = Mathf.Round(currentX - 0.5f) + 0.5f;
+                        
+                        // Плавно выравниваем к целевой позиции
+                        if (Mathf.Abs(currentX - targetX) > 0.01f)
+                        {
+                            float newX = Mathf.MoveTowards(currentX, targetX, fallingAlignSpeed * Time.fixedDeltaTime);
+                            transform.position = new Vector3(newX, transform.position.y, transform.position.z);
+                        }
                     }
                 }
                 
