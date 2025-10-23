@@ -140,8 +140,8 @@ public class DiggableBlock : MonoBehaviour
     }
 
     /// <summary>
-    /// Проверка, не находится ли игрок внутри блока при восстановлении
-    /// В оригинальной игре Lode Runner - игрок умирает!
+    /// Проверка, не находится ли игрок или враги внутри блока при восстановлении
+    /// В оригинальной игре Lode Runner - раздавливает!
     /// </summary>
     private void CheckForPlayerInside()
     {
@@ -153,9 +153,9 @@ public class DiggableBlock : MonoBehaviour
 
         foreach (var col in colliders)
         {
+            // Проверка игрока
             if (col.CompareTag("Player"))
             {
-                // Убиваем игрока как в оригинальной игре
                 PlayerController player = col.GetComponent<PlayerController>();
                 if (player != null && !player.IsDead())
                 {
@@ -163,6 +163,49 @@ public class DiggableBlock : MonoBehaviour
                     Debug.Log("Игрок раздавлен восстанавливающимся блоком!");
                 }
             }
+            
+            // Проверка врагов (старая система)
+            EnemyController oldEnemy = col.GetComponent<EnemyController>();
+            if (oldEnemy != null && !oldEnemy.IsDead())
+            {
+                oldEnemy.Die();
+                Debug.Log($"Враг {oldEnemy.name} раздавлен восстанавливающимся блоком!");
+            }
+            
+            // Проверка врагов (новая система Lode Runner AI)
+            LodeRunnerEnemyAI newEnemy = col.GetComponent<LodeRunnerEnemyAI>();
+            if (newEnemy != null && !newEnemy.IsDead())
+            {
+                newEnemy.Die();
+                Debug.Log($"Враг {newEnemy.name} раздавлен восстанавливающимся блоком!");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Определение когда враг падает в выкопанную яму
+    /// </summary>
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        // Проверяем только если блок выкопан и это триггер-коллайдер
+        if (!isDug) return;
+        
+        // Проверяем врагов (старая система)
+        EnemyController oldEnemy = collision.GetComponent<EnemyController>();
+        if (oldEnemy != null && !oldEnemy.IsStuckInHole() && !oldEnemy.IsDead())
+        {
+            // Враг упал в яму - застревает
+            oldEnemy.StuckInHole();
+            Debug.Log($"Враг {oldEnemy.name} застрял в яме!");
+        }
+        
+        // Проверяем врагов (новая система Lode Runner AI)
+        LodeRunnerEnemyAI newEnemy = collision.GetComponent<LodeRunnerEnemyAI>();
+        if (newEnemy != null && !newEnemy.IsStuckInHole() && !newEnemy.IsDead())
+        {
+            // Враг упал в яму - застревает
+            newEnemy.StuckInHole();
+            Debug.Log($"Враг {newEnemy.name} застрял в яме! (новая система)");
         }
     }
 

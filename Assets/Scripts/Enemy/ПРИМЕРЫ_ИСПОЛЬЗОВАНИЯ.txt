@@ -1,0 +1,485 @@
+╔═══════════════════════════════════════════════════════════════╗
+║  💻 ПРИМЕРЫ ИСПОЛЬЗОВАНИЯ НОВОЙ СИСТЕМЫ AI 💻               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+
+═══════════════════════════════════════════════════════════════
+
+
+🔧 ПРИМЕР 1: Создание врага из кода
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+using UnityEngine;
+
+public class EnemySpawner : MonoBehaviour
+{
+    [SerializeField] private GameObject enemyPrefab;
+    [SerializeField] private Transform spawnPoint;
+    
+    void Start()
+    {
+        // Создаем врага
+        GameObject enemy = Instantiate(enemyPrefab, spawnPoint.position, Quaternion.identity);
+        
+        // Получаем компонент AI
+        LodeRunnerEnemyAI ai = enemy.GetComponent<LodeRunnerEnemyAI>();
+        
+        // Настраиваем через код (опционально)
+        // Примечание: обычно настраивается через Inspector
+    }
+}
+
+
+═══════════════════════════════════════════════════════════════
+
+
+🔧 ПРИМЕР 2: Динамическое изменение сложности
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+using UnityEngine;
+using System.Reflection;
+
+public class DifficultyManager : MonoBehaviour
+{
+    public enum Difficulty
+    {
+        Easy,
+        Medium,
+        Hard
+    }
+    
+    [SerializeField] private Difficulty currentDifficulty = Difficulty.Medium;
+    
+    void Start()
+    {
+        ApplyDifficulty();
+    }
+    
+    void ApplyDifficulty()
+    {
+        // Находим всех врагов в сцене
+        LodeRunnerEnemyAI[] enemies = FindObjectsByType<LodeRunnerEnemyAI>(FindObjectsSortMode.None);
+        
+        foreach (LodeRunnerEnemyAI enemy in enemies)
+        {
+            switch (currentDifficulty)
+            {
+                case Difficulty.Easy:
+                    SetEnemySpeed(enemy, 2f, 1.5f);
+                    SetDetectionRange(enemy, 10f);
+                    break;
+                    
+                case Difficulty.Medium:
+                    SetEnemySpeed(enemy, 3f, 2f);
+                    SetDetectionRange(enemy, 15f);
+                    break;
+                    
+                case Difficulty.Hard:
+                    SetEnemySpeed(enemy, 4f, 2.5f);
+                    SetDetectionRange(enemy, 20f);
+                    SetUseSimpleAI(enemy, false); // Умный режим!
+                    break;
+            }
+        }
+        
+        Debug.Log($"Сложность установлена: {currentDifficulty}");
+    }
+    
+    // Вспомогательные методы для изменения параметров через Reflection
+    void SetEnemySpeed(LodeRunnerEnemyAI enemy, float walkSpeed, float climbSpeed)
+    {
+        var type = enemy.GetType();
+        type.GetField("walkSpeed", BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(enemy, walkSpeed);
+        type.GetField("climbSpeed", BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(enemy, climbSpeed);
+    }
+    
+    void SetDetectionRange(LodeRunnerEnemyAI enemy, float range)
+    {
+        var type = enemy.GetType();
+        type.GetField("detectionRange", BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(enemy, range);
+    }
+    
+    void SetUseSimpleAI(LodeRunnerEnemyAI enemy, bool useSimple)
+    {
+        var type = enemy.GetType();
+        type.GetField("useSimpleAI", BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(enemy, useSimple);
+    }
+}
+
+
+═══════════════════════════════════════════════════════════════
+
+
+🔧 ПРИМЕР 3: Проверка состояния врага
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+using UnityEngine;
+
+public class PlayerController : MonoBehaviour
+{
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        // Проверяем врага
+        LodeRunnerEnemyAI enemy = collision.gameObject.GetComponent<LodeRunnerEnemyAI>();
+        
+        if (enemy != null)
+        {
+            // Проверяем состояние
+            if (enemy.IsDead())
+            {
+                Debug.Log("Враг мертв, игнорируем");
+                return;
+            }
+            
+            if (enemy.IsStuckInHole())
+            {
+                Debug.Log("Враг в яме, игнорируем");
+                return;
+            }
+            
+            // Враг активен - убиваем игрока
+            Die();
+            Debug.Log("Враг поймал игрока!");
+        }
+    }
+    
+    void Die()
+    {
+        // Логика смерти игрока
+        Debug.Log("Игрок умер!");
+    }
+}
+
+
+═══════════════════════════════════════════════════════════════
+
+
+🔧 ПРИМЕР 4: Кастомная логика при застревании в яме
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+using UnityEngine;
+
+public class DiggableBlock : MonoBehaviour
+{
+    private bool isDug = false;
+    
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (!isDug) return;
+        
+        // Проверяем новую систему врагов
+        LodeRunnerEnemyAI enemy = collision.GetComponent<LodeRunnerEnemyAI>();
+        
+        if (enemy != null && !enemy.IsStuckInHole() && !enemy.IsDead())
+        {
+            // Враг упал в яму!
+            enemy.StuckInHole();
+            
+            // Дополнительная логика (звук, эффекты, очки)
+            PlayTrapSound();
+            SpawnDustEffect(enemy.transform.position);
+            AddPlayerScore(100);
+            
+            Debug.Log($"Враг {enemy.name} застрял в яме! +100 очков");
+        }
+    }
+    
+    void PlayTrapSound()
+    {
+        // Воспроизвести звук
+        // AudioSource.PlayClipAtPoint(trapSound, transform.position);
+    }
+    
+    void SpawnDustEffect(Vector3 position)
+    {
+        // Создать эффект пыли
+        // Instantiate(dustEffect, position, Quaternion.identity);
+    }
+    
+    void AddPlayerScore(int points)
+    {
+        // Добавить очки игроку
+        // GameManager.Instance.AddScore(points);
+    }
+}
+
+
+═══════════════════════════════════════════════════════════════
+
+
+🔧 ПРИМЕР 5: Смешанное использование двух систем
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+using UnityEngine;
+
+public class MixedEnemySpawner : MonoBehaviour
+{
+    [SerializeField] private GameObject classicEnemyPrefab;  // LodeRunnerEnemyAI
+    [SerializeField] private GameObject modernEnemyPrefab;   // EnemyController
+    [SerializeField] private Transform[] spawnPoints;
+    
+    void Start()
+    {
+        // Создаем врагов разных типов
+        for (int i = 0; i < spawnPoints.Length; i++)
+        {
+            GameObject prefab;
+            
+            if (i % 2 == 0)
+            {
+                // Четные - классические враги (простые)
+                prefab = classicEnemyPrefab;
+                GameObject enemy = Instantiate(prefab, spawnPoints[i].position, Quaternion.identity);
+                enemy.name = $"ClassicEnemy_{i}";
+            }
+            else
+            {
+                // Нечетные - современные враги (патрулирование)
+                prefab = modernEnemyPrefab;
+                GameObject enemy = Instantiate(prefab, spawnPoints[i].position, Quaternion.identity);
+                enemy.name = $"ModernEnemy_{i}";
+            }
+        }
+        
+        Debug.Log($"Создано {spawnPoints.Length} врагов (смешанный тип)");
+    }
+}
+
+
+═══════════════════════════════════════════════════════════════
+
+
+🔧 ПРИМЕР 6: Использование GridPathfinder отдельно
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+using UnityEngine;
+using System.Collections.Generic;
+
+public class PathViewer : MonoBehaviour
+{
+    [SerializeField] private GridPathfinder pathfinder;
+    [SerializeField] private Transform startPoint;
+    [SerializeField] private Transform endPoint;
+    
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            // Найти путь
+            List<Vector2Int> path = pathfinder.FindPath(
+                startPoint.position, 
+                endPoint.position
+            );
+            
+            if (path != null && path.Count > 0)
+            {
+                Debug.Log($"Путь найден! Длина: {path.Count} шагов");
+                
+                // Вывести путь
+                foreach (Vector2Int step in path)
+                {
+                    Vector3 worldPos = pathfinder.GridToWorld(step);
+                    Debug.Log($"  Шаг: {step} → Мир: {worldPos}");
+                }
+            }
+            else
+            {
+                Debug.Log("Путь не найден!");
+            }
+        }
+    }
+    
+    void OnDrawGizmos()
+    {
+        if (pathfinder == null) return;
+        
+        List<Vector2Int> path = pathfinder.GetCurrentPath();
+        
+        if (path != null && path.Count > 0)
+        {
+            // Рисуем путь
+            Gizmos.color = Color.green;
+            for (int i = 0; i < path.Count - 1; i++)
+            {
+                Vector3 from = pathfinder.GridToWorld(path[i]);
+                Vector3 to = pathfinder.GridToWorld(path[i + 1]);
+                Gizmos.DrawLine(from, to);
+            }
+        }
+    }
+}
+
+
+═══════════════════════════════════════════════════════════════
+
+
+🔧 ПРИМЕР 7: Определение типа клетки в позиции
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+using UnityEngine;
+
+public class TileInspector : MonoBehaviour
+{
+    [SerializeField] private GridPathfinder pathfinder;
+    
+    void Update()
+    {
+        // При клике мышью - показать тип клетки
+        if (Input.GetMouseButtonDown(0))
+        {
+            Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            mouseWorldPos.z = 0f;
+            
+            Vector2Int gridPos = pathfinder.WorldToGrid(mouseWorldPos);
+            GridPathfinder.TileType type = pathfinder.GetTileType(gridPos);
+            
+            Debug.Log($"Клетка {gridPos}: Тип = {type}");
+            Debug.Log($"  Мировые координаты: {mouseWorldPos}");
+            Debug.Log($"  Сеточные координаты: {gridPos}");
+        }
+    }
+}
+
+
+═══════════════════════════════════════════════════════════════
+
+
+🔧 ПРИМЕР 8: Подсчет живых врагов
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+using UnityEngine;
+
+public class GameManager : MonoBehaviour
+{
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            CheckEnemyStatus();
+        }
+    }
+    
+    void CheckEnemyStatus()
+    {
+        // Находим всех врагов (обе системы)
+        LodeRunnerEnemyAI[] newEnemies = FindObjectsByType<LodeRunnerEnemyAI>(FindObjectsSortMode.None);
+        EnemyController[] oldEnemies = FindObjectsByType<EnemyController>(FindObjectsSortMode.None);
+        
+        int totalEnemies = newEnemies.Length + oldEnemies.Length;
+        int aliveCount = 0;
+        int deadCount = 0;
+        int stuckCount = 0;
+        
+        // Новая система
+        foreach (var enemy in newEnemies)
+        {
+            if (enemy.IsDead())
+                deadCount++;
+            else if (enemy.IsStuckInHole())
+                stuckCount++;
+            else
+                aliveCount++;
+        }
+        
+        // Старая система
+        foreach (var enemy in oldEnemies)
+        {
+            if (enemy.IsDead())
+                deadCount++;
+            else if (enemy.IsStuckInHole())
+                stuckCount++;
+            else
+                aliveCount++;
+        }
+        
+        Debug.Log($"=== СТАТИСТИКА ВРАГОВ ===");
+        Debug.Log($"Всего: {totalEnemies}");
+        Debug.Log($"Живых: {aliveCount}");
+        Debug.Log($"Мертвых: {deadCount}");
+        Debug.Log($"В ямах: {stuckCount}");
+    }
+}
+
+
+═══════════════════════════════════════════════════════════════
+
+
+🔧 ПРИМЕР 9: Босс-враг с кастомной логикой
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+using UnityEngine;
+
+public class BossEnemy : MonoBehaviour
+{
+    [SerializeField] private LodeRunnerEnemyAI ai;
+    [SerializeField] private int maxHealth = 3;
+    private int currentHealth;
+    
+    void Start()
+    {
+        currentHealth = maxHealth;
+    }
+    
+    public void TakeDamage(int damage)
+    {
+        currentHealth -= damage;
+        Debug.Log($"Босс получил {damage} урона! Здоровье: {currentHealth}/{maxHealth}");
+        
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+    }
+    
+    void Die()
+    {
+        Debug.Log("Босс повержен!");
+        
+        // Используем стандартную смерть AI
+        if (ai != null)
+        {
+            ai.Die();
+        }
+        
+        // Дополнительная логика (награда, завершение уровня и т.д.)
+        OnBossDefeated();
+    }
+    
+    void OnBossDefeated()
+    {
+        // Ваша логика
+        Debug.Log("Уровень завершен! Игрок победил!");
+    }
+}
+
+
+═══════════════════════════════════════════════════════════════
+
+
+💡 ПОЛЕЗНЫЕ СОВЕТЫ:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Используйте GetComponent<> для получения компонентов
+✅ Проверяйте null перед использованием
+✅ Используйте публичные методы для проверки состояния:
+   • IsDead()
+   • IsStuckInHole()
+   • GetState()
+
+✅ Для изменения параметров через код используйте Reflection
+   или создайте публичные сеттеры
+
+✅ Можете комбинировать обе системы в одной игре
+
+✅ GridPathfinder можно использовать отдельно для других целей
+   (например, для движения предметов, снарядов и т.д.)
+
+
+═══════════════════════════════════════════════════════════════
+
+
+✨ ГОТОВО! ИСПОЛЬЗУЙТЕ НОВУЮ СИСТЕМУ! ✨
+
+Примеры показывают основные сценарии использования.
+Адаптируйте их под свои нужды!
+
